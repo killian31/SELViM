@@ -105,7 +105,7 @@ def main(
             test_loss, test_acc = eval(model, test_loader, device, criterion=criterion)
             print(f"Test loss: {test_loss:.2f}, Test accuracy: {test_acc:.2f}%")
             if use_wandb:
-                wandb.log({"test_loss": test_loss, "test_accuracy": float(test_acc)})
+                wandb.log({"test_loss": test_loss, "test_accuracy": test_acc})
 
     print("Training finished!")
     # final eval
