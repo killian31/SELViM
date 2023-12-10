@@ -1,12 +1,5 @@
-import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn import CrossEntropyLoss
-from torch.optim import Adam
-from torch.utils.data import DataLoader
-from torchvision.datasets.mnist import MNIST
-from torchvision.transforms import ToTensor
-from tqdm import tqdm, trange
 
 from utils import get_positional_embeddings, patchify
 
@@ -74,8 +67,32 @@ class ViTBlock(nn.Module):
         return out
 
 
+class ClassificationHead(nn.Module):
+    def __init__(self, hidden_d, out_d):
+        super(ClassificationHead, self).__init__()
+        self.hidden_d = hidden_d
+        self.out_d = out_d
+
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_d, hidden_d * 4),
+            nn.GELU(),
+            nn.Linear(hidden_d * 4, out_d),
+        )
+
+    def forward(self, x):
+        return self.mlp(x)
+
+
 class ViT(nn.Module):
-    def __init__(self, chw, n_patches=7, n_blocks=2, hidden_d=8, n_heads=2, out_d=10):
+    def __init__(
+        self,
+        chw,
+        n_patches=7,
+        n_blocks=2,
+        hidden_d=8,
+        n_heads=2,
+        out_d=10,
+    ):
         super(ViT, self).__init__()
 
         self.chw = chw  # (C, H, W)
@@ -112,8 +129,7 @@ class ViT(nn.Module):
             [ViTBlock(hidden_d, n_heads) for _ in range(n_blocks)]
         )
 
-        # 5) Classification MLPk
-        self.mlp = nn.Sequential(nn.Linear(self.hidden_d, out_d), nn.Softmax(dim=-1))
+        self.mlp = ClassificationHead(hidden_d, out_d)
 
     def forward(self, images):
         n, c, h, w = images.shape

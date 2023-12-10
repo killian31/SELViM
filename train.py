@@ -1,10 +1,12 @@
 import argparse
 import os
+import random
 
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 from torch.utils.data import DataLoader
+from torchvision import transforms
 from torchvision.datasets.mnist import MNIST
 from torchvision.transforms import ToTensor
 from tqdm import tqdm, trange
@@ -14,12 +16,35 @@ from Networks import ViT
 from utils import eval
 
 
+class RotateTransform:
+    def __init__(self, angles):
+        self.angles = angles
+
+    def __call__(self, img):
+        angle = random.choice(self.angles)
+        return transforms.functional.rotate(img, angle)
+
+
+class CustomMNIST(MNIST):
+    def __init__(self, *args, angles, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.angles = angles
+
+    def __getitem__(self, index):
+        img, _ = super().__getitem__(index)  # Ignore the original label
+        angle = random.choice(self.angles)
+        rotated_img = transforms.functional.rotate(img, angle)
+        angle_index = self.angles.index(angle)
+        return rotated_img, angle_index
+
+
 def main(
     n_patches,
     n_blocks,
     hidden_d,
     n_heads,
     out_d,
+    ssl_preprocess,
     n_epochs,
     lr,
     batch_size,
@@ -30,14 +55,38 @@ def main(
     use_wandb=False,
 ):
     # Loading data
-    transform = ToTensor()
 
-    train_set = MNIST(
-        root="./../datasets", train=True, download=True, transform=transform
-    )
-    test_set = MNIST(
-        root="./../datasets", train=False, download=True, transform=transform
-    )
+    if ssl_preprocess == "rotation":
+        rotation_angles = [0, 90, 180, 270]
+
+        # Define the transform including rotation
+        transform = transforms.Compose(
+            [transforms.ToTensor(), RotateTransform(rotation_angles)]
+        )
+        train_set = CustomMNIST(
+            root="./../datasets",
+            train=True,
+            download=True,
+            transform=transforms.ToTensor(),
+            angles=rotation_angles,
+        )
+        test_set = CustomMNIST(
+            root="./../datasets",
+            train=False,
+            download=True,
+            transform=transforms.ToTensor(),
+            angles=rotation_angles,
+        )
+    elif ssl_preprocess == "none":
+        transform = ToTensor()
+        train_set = MNIST(
+            root="./../datasets", train=True, download=True, transform=transform
+        )
+        test_set = MNIST(
+            root="./../datasets", train=False, download=True, transform=transform
+        )
+    else:
+        raise ValueError(f"Unknown SSL preprocessing: {ssl_preprocess}")
 
     train_loader = DataLoader(train_set, shuffle=True, batch_size=batch_size)
     test_loader = DataLoader(test_set, shuffle=False, batch_size=batch_size)
@@ -51,7 +100,7 @@ def main(
     )
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-
+    out_d = 4 if ssl_preprocess == "rotation" else out_d
     model = ViT(
         (1, 28, 28),
         n_patches=n_patches,
@@ -81,13 +130,13 @@ def main(
             x, y = batch
             x, y = x.to(device), y.to(device)
             y_hat = model(x)
-            loss = criterion(y_hat, y)
 
-            train_loss += loss.detach().cpu().item() / len(train_loader)
+            loss = criterion(y_hat, y)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            train_loss += loss.detach().cpu().item() / len(train_loader)
 
         print(f"Epoch {epoch + 1}/{n_epochs} loss: {train_loss:.2f}")
         if use_wandb:
@@ -128,6 +177,13 @@ if __name__ == "__main__":
         "--n_heads", type=int, default=2, help="Number of attention heads"
     )
     parser.add_argument("--out_d", type=int, default=10, help="Output dimension")
+    parser.add_argument(
+        "--ssl_preprocess",
+        type=str,
+        default="rotation",
+        choices=["rotation", "none"],
+        help="SSL data prepprocessing",
+    )
     parser.add_argument("--n_epochs", type=int, default=5, help="Number of epochs")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size")
