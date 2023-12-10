@@ -1,4 +1,4 @@
-# SSL-Inpainting
+# SSL-Vision
 
 This project aims to train a Vision Transformer with a diffusion head to perform
 inpainting on images using self-supervised learning.
@@ -10,13 +10,13 @@ inpainting on images using self-supervised learning.
 Clone the repo:
 
 ```bash
-git clone https://github.com/killian31/SSL-ViT.git
+git clone https://github.com/killian31/SSL-Vision.git
 ```
 
 Install dependencies:
 
 ```bash
-cd SSL-ViT
+cd SSL-Vision
 pip install -r requirements.txt
 ```
 
