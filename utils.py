@@ -1,5 +1,9 @@
+import random
+
 import numpy as np
 import torch
+from torchvision import transforms
+from torchvision.datasets.mnist import MNIST
 from tqdm import tqdm
 
 
@@ -49,3 +53,25 @@ def eval(model, test_loader, device, criterion):
             correct += torch.sum(torch.argmax(y_hat, dim=1) == y).detach().cpu().item()
             total += len(x)
     return test_loss, correct / total * 100
+
+
+class RotateTransform:
+    def __init__(self, angles):
+        self.angles = angles
+
+    def __call__(self, img):
+        angle = random.choice(self.angles)
+        return transforms.functional.rotate(img, angle)
+
+
+class CustomMNIST(MNIST):
+    def __init__(self, *args, angles, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.angles = angles
+
+    def __getitem__(self, index):
+        img, _ = super().__getitem__(index)  # Ignore the original label
+        angle = random.choice(self.angles)
+        rotated_img = transforms.functional.rotate(img, angle)
+        angle_index = self.angles.index(angle)
+        return rotated_img, angle_index
