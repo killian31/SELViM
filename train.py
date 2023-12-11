@@ -27,9 +27,9 @@ def main(
     batch_size,
     save_model_freq,
     eval_freq,
-    save_dir="./models",
-    checkpoint=None,
-    use_wandb=False,
+    save_dir,
+    checkpoint,
+    use_wandb,
 ):
     # Loading data
 
