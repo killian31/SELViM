@@ -1,7 +1,6 @@
-# SSL-Vision
+# SELViM
 
-This project aims to train a Vision Transformer with a diffusion head to perform
-inpainting on images using self-supervised learning.
+SELViM: Self-supervisEd Learning toolbox for large VisIon Model.
 
 ## Installation & Usage
 
@@ -10,7 +9,7 @@ inpainting on images using self-supervised learning.
 Clone the repo:
 
 ```bash
-git clone https://github.com/killian31/SSL-Vision.git
+git clone https://github.com/killian31/SELViM.git
 ```
 
 Install dependencies:
