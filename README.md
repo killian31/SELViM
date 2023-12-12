@@ -15,7 +15,7 @@ git clone https://github.com/killian31/SELViM.git
 Install dependencies:
 
 ```bash
-cd SSL-Vision
+cd SELViM
 pip install -r requirements.txt
 ```
 
